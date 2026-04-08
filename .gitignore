@@ -1,0 +1,40 @@
+# Build outputs
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# NuGet
+*.nupkg
+packages/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# SQLite database
+*.db
+*.db-shm
+*.db-wal
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Personal/IDE metadata
+.cr/
+
+# Logs
+*.log
+logs/
+
+# Environment / secrets
+.env
+appsettings.Development.json

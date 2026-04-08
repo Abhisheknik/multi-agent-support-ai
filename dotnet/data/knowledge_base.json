@@ -1,0 +1,74 @@
+[
+  {
+    "id": "billing_001",
+    "category": "billing",
+    "title": "How to view and manage invoices",
+    "content": "You can view your invoices and billing history in Account > Billing. Click 'Download Invoice' for PDF copies. Invoices are sent via email within 24 hours of each charge or payment. If you were charged and did not receive an invoice, check your spam folder."
+  },
+  {
+    "id": "billing_002",
+    "category": "billing",
+    "title": "Duplicate charges and double billing",
+    "content": "If you were charged twice or see a duplicate charge this month, it may be due to a failed payment retry. To resolve a double charge: 1) Go to Account > Billing > Transaction History, 2) Identify the duplicate payment, 3) Click 'Request Refund'. Refunds are processed within 5-7 business days. Contact support if the issue persists."
+  },
+  {
+    "id": "billing_003",
+    "category": "billing",
+    "title": "Subscription renewal and cancellation",
+    "content": "Subscriptions auto-renew on the anniversary date each month or year. You can cancel anytime from Account > Subscriptions without penalty. Refunds for unused periods are issued within 5-7 business days. To stop being charged, cancel before the renewal date."
+  },
+  {
+    "id": "billing_004",
+    "category": "billing",
+    "title": "Unexpected or incorrect charges",
+    "content": "If you see an unexpected charge or wrong amount on your bill: 1) Check Account > Billing for a description of the charge, 2) Verify your subscription plan and any add-ons, 3) If the charge is incorrect, contact support with the transaction ID for a review and refund."
+  },
+  {
+    "id": "technical_001",
+    "category": "technical",
+    "title": "Common app crashes and fixes",
+    "content": "Most crashes are resolved by: 1) Updating to the latest version, 2) Clearing app cache in Settings > Storage > Clear Cache, 3) Restarting your device. If the app keeps crashing or freezing, uninstall and reinstall. Contact support with your app version and device info if the problem continues."
+  },
+  {
+    "id": "technical_002",
+    "category": "technical",
+    "title": "API integration and authentication errors",
+    "content": "Use your API key from Account > Developer Settings. Include it as a Bearer token in the Authorization header. If you get a 401 error, your key may be expired — regenerate it. Rate limits: 100 requests/minute for standard plans, 1000 for enterprise. For 500 errors, check our status page."
+  },
+  {
+    "id": "technical_003",
+    "category": "technical",
+    "title": "Login errors and authentication issues",
+    "content": "If you cannot log in or keep getting error messages: 1) Clear your browser cookies and cache, 2) Try incognito/private mode, 3) Disable browser extensions, 4) Check if Caps Lock is on for your password, 5) Try a different browser. If the login page is broken, check our status page for outages."
+  },
+  {
+    "id": "account_001",
+    "category": "account",
+    "title": "Password reset and account recovery",
+    "content": "Forgot your password? Click 'Forgot Password' on the login page. A reset link will be sent to your registered email within minutes. The link expires after 24 hours — request a new one if needed. Check spam folder if you don't see it. If you lost access to your email, contact support for manual account recovery."
+  },
+  {
+    "id": "account_002",
+    "category": "account",
+    "title": "Update profile and account information",
+    "content": "Go to Account > Profile to update your name, email, phone number, and preferences. Email changes require verification via a confirmation link. Password changes take effect immediately. If you cannot update your account, make sure you are verified."
+  },
+  {
+    "id": "account_003",
+    "category": "account",
+    "title": "Account locked or suspended",
+    "content": "Your account may be locked after multiple failed login attempts (usually 5). Wait 30 minutes and try again, or use 'Forgot Password' to reset. Suspended accounts receive an email with the reason. Contact support to appeal a suspension or unlock your account."
+  },
+  {
+    "id": "general_001",
+    "category": "general",
+    "title": "Getting started with our platform",
+    "content": "Welcome! Here's how to get started: 1) Sign up with email or social login, 2) Complete your profile setup, 3) Follow the onboarding tour in the dashboard, 4) Create your first project. Full documentation and video guides are available at docs.example.com. Need help? Use the live chat."
+  },
+  {
+    "id": "general_002",
+    "category": "general",
+    "title": "Contacting support and escalation",
+    "content": "Reach our support team via: Live chat (9am-6pm EST, Mon-Fri), Email support@example.com (24-48hr response), Phone 1-800-EXAMPLE (business hours). Enterprise customers have a dedicated account manager. For urgent issues, use live chat and mention it's urgent to get priority handling."
+  }
+]
