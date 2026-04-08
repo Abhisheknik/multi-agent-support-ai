@@ -110,6 +110,80 @@ app.MapPost("/support", async (
     ));
 });
 
+// ── GET /support/stream ───────────────────────────────────────────────────────
+// Server-Sent Events: emits live progress as each agent runs
+app.MapGet("/support/stream", async (
+    string? message,
+    IntentClassifierAgent   classifier,
+    KnowledgeRetrieverAgent retriever,
+    HttpContext ctx) =>
+{
+    if (string.IsNullOrWhiteSpace(message))
+    {
+        ctx.Response.StatusCode = 400;
+        return;
+    }
+
+    ctx.Response.Headers["Content-Type"]       = "text/event-stream";
+    ctx.Response.Headers["Cache-Control"]      = "no-cache";
+    ctx.Response.Headers["Connection"]         = "keep-alive";
+    ctx.Response.Headers["X-Accel-Buffering"] = "no";
+
+    var opts = new System.Text.Json.JsonSerializerOptions
+        { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase };
+
+    async Task Emit(object data)
+    {
+        await ctx.Response.WriteAsync(
+            $"data: {System.Text.Json.JsonSerializer.Serialize(data, opts)}\n\n");
+        await ctx.Response.Body.FlushAsync();
+    }
+
+    try
+    {
+        await Emit(new { step = "user", status = "done" });
+
+        // ── Intent classification ─────────────────────────────────────────
+        await Emit(new { step = "intent", status = "processing" });
+        var cls = await classifier.ClassifyAsync(message);
+        await Emit(new {
+            step       = "intent",   status     = "done",
+            intent     = cls.Intent, confidence = cls.Confidence,
+            keywords   = cls.Keywords,           urgency    = cls.Urgency
+        });
+
+        // ── Knowledge retrieval ───────────────────────────────────────────
+        await Emit(new { step = "retrieval", status = "processing" });
+        var articles  = retriever.KnowledgeBase.Search(message, 5);
+        var retrieval = await retriever.RetrieveAndAnswerAsync(message);
+        await Emit(new {
+            step          = "retrieval", status        = "done",
+            articlesFound = articles.Count,
+            categories    = articles.Select(a => a.Category).Distinct().ToList()
+        });
+
+        // ── Gemini (ran inside retriever) ─────────────────────────────────
+        await Emit(new { step = "gemini", status = "done" });
+
+        // ── Final response ────────────────────────────────────────────────
+        if (!retrieval.Success)
+        {
+            await Emit(new { step = "response", status = "error", error = retrieval.Error });
+            return;
+        }
+
+        await Emit(new {
+            step       = "response",      status     = "done",
+            answer     = retrieval.Response,
+            intent     = cls.Intent,      confidence = cls.Confidence
+        });
+    }
+    catch (Exception ex)
+    {
+        await Emit(new { step = "error", message = ex.Message });
+    }
+});
+
 // ── POST /feedback ────────────────────────────────────────────────────────────
 app.MapPost("/feedback", (FeedbackRequest body, ILogger<Program> logger) =>
 {

@@ -331,6 +331,18 @@
       text-align: center; font-size: 12px; color: var(--muted);
       margin-top: 20px; height: 18px; transition: opacity .3s;
     }
+    .node-data {
+      margin-top: 8px; font-size: 11px; font-weight: 600;
+      color: #2563eb; background: rgba(37,99,235,.1);
+      border-radius: 6px; padding: 3px 8px;
+      animation: fadeInUp .3s ease;
+    }
+    .node-sub {
+      margin-top: 3px; font-size: 10px; color: var(--muted);
+      animation: fadeInUp .3s ease;
+    }
+    [data-theme="dark"] .node-data { background: rgba(37,99,235,.2); }
+    @keyframes fadeInUp { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
   </style>
 </head>
 <body>
@@ -558,48 +570,89 @@
     send(msg);
   }
 
-  async function send(text) {
+  function send(text) {
     document.getElementById('welcome')?.remove();
     addBubble('user', text);
-
-    const btn = document.getElementById('sendBtn');
-    btn.disabled = true;
-
-    // Animate architecture flow
+    clearNodeData();
     setFlowStep(1);
-    const flowTimer1 = setTimeout(() => setFlowStep(2), 600);
-    const flowTimer2 = setTimeout(() => setFlowStep(3), 1400);
+    updateNodeData('node-user', text.length > 36 ? text.slice(0, 36) + '…' : text);
 
+    const btn      = document.getElementById('sendBtn');
+    btn.disabled   = true;
     const typingId = addTyping();
 
-    try {
-      const res = await fetch(`${API}/support`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text })
-      });
-      removeTyping(typingId);
-      clearTimeout(flowTimer1); clearTimeout(flowTimer2);
-      setFlowStep(4);
-      setTimeout(resetFlow, 2500);
+    const es = new EventSource(`${API}/support/stream?message=${encodeURIComponent(text)}`);
 
-      if (!res.ok) {
-        const e = await res.json().catch(() => ({}));
-        addError(e.detail || `Error ${res.status}`);
-        return;
+    es.onmessage = (event) => {
+      const d = JSON.parse(event.data);
+
+      if (d.step === 'intent' && d.status === 'processing') {
+        setFlowStep(2);
+        updateNodeData('node-intent', '⏳ classifying…');
+
+      } else if (d.step === 'intent' && d.status === 'done') {
+        updateNodeData('node-intent', `${intentEmoji(d.intent)} ${d.intent} · ${Math.round(d.confidence * 100)}%`);
+        if (d.keywords?.length) updateNodeSub('node-intent', d.keywords.slice(0, 3).join(', '));
+        setFlowStep(3);
+
+      } else if (d.step === 'retrieval' && d.status === 'processing') {
+        updateNodeData('node-kb', '⏳ searching…');
+
+      } else if (d.step === 'retrieval' && d.status === 'done') {
+        updateNodeData('node-kb', `📄 ${d.articlesFound} article${d.articlesFound !== 1 ? 's' : ''} found`);
+        if (d.categories?.length) updateNodeSub('node-kb', d.categories.join(', '));
+        setFlowStep(4);
+
+      } else if (d.step === 'gemini' && d.status === 'done') {
+        updateNodeData('node-gemini', '✨ generating…');
+        setFlowStep(5);
+
+      } else if (d.step === 'response' && d.status === 'done') {
+        es.close();
+        removeTyping(typingId);
+        btn.disabled = false;
+        updateNodeData('node-gemini', `✅ ${Math.round(d.confidence * 100)}% confident`);
+        updateNodeData('node-response', '💬 delivered');
+        addBotBubble(d.answer, d.intent, d.confidence);
+        // Mark all done
+        FLOW_NODES.forEach(id => { const el = document.getElementById(id); el?.classList.remove('active'); el?.classList.add('done'); });
+        FLOW_ARROWS.forEach(id => { const el = document.getElementById(id); el?.classList.remove('active'); el?.classList.add('done'); });
+        document.getElementById('archLiveLabel').textContent = 'Pipeline complete ✓';
+        setTimeout(resetFlow, 3500);
+
+      } else if (d.step === 'response' && d.status === 'error') {
+        es.close(); removeTyping(typingId); btn.disabled = false;
+        addError(d.error || 'Pipeline error'); resetFlow();
+
+      } else if (d.step === 'error') {
+        es.close(); removeTyping(typingId); btn.disabled = false;
+        addError(d.message || 'Server error'); resetFlow();
       }
+    };
 
-      const d = await res.json();
-      addBotBubble(d.answer, d.intent, d.confidence);
+    es.onerror = () => {
+      es.close(); removeTyping(typingId); btn.disabled = false;
+      addError('Cannot reach the API. Make sure the server is running.'); resetFlow();
+    };
+  }
 
-    } catch (err) {
-      clearTimeout(flowTimer1); clearTimeout(flowTimer2);
-      removeTyping(typingId);
-      resetFlow();
-      addError('Cannot reach the API. Make sure the server is running.');
-    } finally {
-      btn.disabled = false;
-    }
+  // ── Node data helpers ─────────────────────────────────────────────────────
+  function clearNodeData() {
+    FLOW_NODES.forEach(id => {
+      document.getElementById(id)?.querySelectorAll('.node-data,.node-sub').forEach(el => el.remove());
+    });
+  }
+  function updateNodeData(nodeId, text) {
+    const el = document.getElementById(nodeId); if (!el) return;
+    let chip = el.querySelector('.node-data');
+    if (!chip) { chip = document.createElement('div'); chip.className = 'node-data'; el.appendChild(chip); }
+    chip.textContent = text;
+  }
+  function updateNodeSub(nodeId, text) {
+    const el = document.getElementById(nodeId); if (!el) return;
+    let sub = el.querySelector('.node-sub');
+    if (!sub) { sub = document.createElement('div'); sub.className = 'node-sub'; el.appendChild(sub); }
+    sub.textContent = text;
   }
 
   // ── Bubble helpers ────────────────────────────────────────────────────────
