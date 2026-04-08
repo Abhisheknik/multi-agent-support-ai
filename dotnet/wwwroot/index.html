@@ -258,6 +258,79 @@
       background:none; border:none; padding:0;
     }
     .article-card .a-preview { font-size:12px; color: var(--muted); margin-top:4px; }
+
+    /* ── Architecture Panel ── */
+    #archPanel {
+      display: none; position: fixed; inset: 0; top: 57px;
+      background: var(--bg); z-index: 100; overflow-y: auto; padding: 40px 24px;
+    }
+    .arch-title {
+      text-align: center; font-size: 24px; font-weight: 700;
+      margin-bottom: 8px; color: var(--text);
+    }
+    .arch-subtitle {
+      text-align: center; font-size: 14px; color: var(--muted); margin-bottom: 52px;
+    }
+    .arch-flow {
+      display: flex; align-items: center; justify-content: center;
+      gap: 0; flex-wrap: wrap; max-width: 1100px; margin: 0 auto;
+    }
+    .flow-node {
+      background: var(--surface); border: 2px solid var(--border);
+      border-radius: 16px; padding: 24px 16px; width: 160px;
+      text-align: center; transition: all .35s; cursor: default;
+    }
+    .flow-node .node-icon { font-size: 36px; margin-bottom: 10px; }
+    .flow-node .node-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+    .flow-node .node-desc  { font-size: 11px; color: var(--muted); line-height: 1.5; }
+    .flow-node.active {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 4px rgba(37,99,235,.18), 0 8px 24px rgba(37,99,235,.12);
+      transform: translateY(-6px);
+    }
+    .flow-node.done { border-color: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,.15); transform: translateY(-4px); }
+    .flow-node.node-user     { border-color: #cbd5e1; }
+    .flow-node.node-response { border-color: #cbd5e1; }
+
+    .flow-arrow {
+      display: flex; align-items: center; gap: 0; padding: 0 6px; flex-shrink: 0;
+    }
+    .arrow-track {
+      width: 44px; height: 3px; background: var(--border); border-radius: 2px;
+      overflow: hidden; position: relative;
+    }
+    .arrow-track::after {
+      content: ''; position: absolute; top: 0; left: -100%;
+      width: 100%; height: 100%; background: #2563eb; border-radius: 2px;
+    }
+    .flow-arrow.active .arrow-track { background: #bfdbfe; }
+    .flow-arrow.active .arrow-track::after { animation: flow-slide .7s linear infinite; }
+    .flow-arrow.done .arrow-track { background: #22c55e; }
+    .flow-arrow.done .arrow-track::after { animation: none; left: 0; background: #22c55e; }
+    .arrow-head { font-size: 14px; color: var(--border); margin-left: -2px; }
+    .flow-arrow.active .arrow-head { color: #2563eb; }
+    .flow-arrow.done   .arrow-head { color: #22c55e; }
+    @keyframes flow-slide { from{left:-100%} to{left:100%} }
+
+    .arch-steps {
+      max-width: 860px; margin: 52px auto 0;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px;
+    }
+    .step-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 18px;
+    }
+    .step-card .step-num {
+      font-size: 11px; font-weight: 700; color: #2563eb;
+      text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px;
+    }
+    .step-card .step-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+    .step-card .step-desc  { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+    .arch-live-label {
+      text-align: center; font-size: 12px; color: var(--muted);
+      margin-top: 20px; height: 18px; transition: opacity .3s;
+    }
   </style>
 </head>
 <body>
@@ -273,6 +346,7 @@
   </div>
   <nav>
     <a href="#" onclick="toggleKB()">📚 Manage Knowledge Base</a>
+    <a href="#" onclick="toggleArch()">🏗️ Architecture</a>
     <a href="/scalar/v1" target="_blank">🔧 API Docs</a>
     <button id="themeBtn" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
   </nav>
@@ -332,8 +406,121 @@
 
 </div>
 
+<!-- Architecture Panel -->
+<div id="archPanel">
+  <div class="arch-title">🏗️ System Architecture</div>
+  <div class="arch-subtitle">See how your query flows through the multi-agent pipeline in real time</div>
+
+  <div class="arch-flow">
+    <div class="flow-node node-user" id="node-user">
+      <div class="node-icon">👤</div>
+      <div class="node-title">User Query</div>
+      <div class="node-desc">Support question via chat or REST API</div>
+    </div>
+
+    <div class="flow-arrow" id="arrow-1">
+      <div class="arrow-track"></div>
+      <span class="arrow-head">▶</span>
+    </div>
+
+    <div class="flow-node" id="node-intent">
+      <div class="node-icon">🧠</div>
+      <div class="node-title">Intent Classifier</div>
+      <div class="node-desc">Detects: billing, technical, account, complaint…</div>
+    </div>
+
+    <div class="flow-arrow" id="arrow-2">
+      <div class="arrow-track"></div>
+      <span class="arrow-head">▶</span>
+    </div>
+
+    <div class="flow-node" id="node-kb">
+      <div class="node-icon">📚</div>
+      <div class="node-title">Knowledge Retriever</div>
+      <div class="node-desc">Finds matching articles from the knowledge base</div>
+    </div>
+
+    <div class="flow-arrow" id="arrow-3">
+      <div class="arrow-track"></div>
+      <span class="arrow-head">▶</span>
+    </div>
+
+    <div class="flow-node" id="node-gemini">
+      <div class="node-icon">✨</div>
+      <div class="node-title">Gemini 2.5 Flash</div>
+      <div class="node-desc">Generates a natural language answer</div>
+    </div>
+
+    <div class="flow-arrow" id="arrow-4">
+      <div class="arrow-track"></div>
+      <span class="arrow-head">▶</span>
+    </div>
+
+    <div class="flow-node node-response" id="node-response">
+      <div class="node-icon">💬</div>
+      <div class="node-title">Response</div>
+      <div class="node-desc">Answer with intent tag & confidence score</div>
+    </div>
+  </div>
+
+  <div class="arch-live-label" id="archLiveLabel"></div>
+
+  <div class="arch-steps">
+    <div class="step-card">
+      <div class="step-num">Step 1</div>
+      <div class="step-title">Query Reception</div>
+      <div class="step-desc">User sends a message via chat UI or <code>POST /support</code>. The API receives the raw text.</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">Step 2</div>
+      <div class="step-title">Intent Classification</div>
+      <div class="step-desc">The Intent Classifier Agent calls Gemini to categorise the query into billing, technical, account, general, or complaint.</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">Step 3</div>
+      <div class="step-title">Knowledge Retrieval</div>
+      <div class="step-desc">The Knowledge Retriever Agent searches the SQLite knowledge base for articles that match the detected intent and keywords.</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">Step 4</div>
+      <div class="step-title">Response Generation</div>
+      <div class="step-desc">Gemini 2.5 Flash synthesises the retrieved articles into a clear, contextual answer returned to the user.</div>
+    </div>
+  </div>
+</div>
+
 <script>
   const API = '';   // same origin
+
+  // ── Architecture Panel ────────────────────────────────────────────────────
+  let archOpen = false;
+  function toggleArch() {
+    archOpen = !archOpen;
+    document.getElementById('archPanel').style.display = archOpen ? 'block' : 'none';
+  }
+
+  const FLOW_NODES   = ['node-user','node-intent','node-kb','node-gemini','node-response'];
+  const FLOW_ARROWS  = ['arrow-1','arrow-2','arrow-3','arrow-4'];
+  const FLOW_LABELS  = ['','Classifying intent…','Retrieving knowledge…','Generating response…','Done ✓'];
+
+  function setFlowStep(step) {
+    FLOW_NODES.forEach((id, i) => {
+      const el = document.getElementById(id);
+      el.classList.remove('active','done');
+      if (i === step)       el.classList.add('active');
+      else if (i < step)    el.classList.add('done');
+    });
+    FLOW_ARROWS.forEach((id, i) => {
+      const el = document.getElementById(id);
+      el.classList.remove('active','done');
+      if (i === step - 1)   el.classList.add('active');
+      else if (i < step -1) el.classList.add('done');
+    });
+    const lbl = document.getElementById('archLiveLabel');
+    if (lbl) lbl.textContent = FLOW_LABELS[step] || '';
+  }
+
+  function resetFlow() { setFlowStep(0); }
 
   // ── Dark mode ─────────────────────────────────────────────────────────────
   function toggleTheme() {
@@ -378,6 +565,11 @@
     const btn = document.getElementById('sendBtn');
     btn.disabled = true;
 
+    // Animate architecture flow
+    setFlowStep(1);
+    const flowTimer1 = setTimeout(() => setFlowStep(2), 600);
+    const flowTimer2 = setTimeout(() => setFlowStep(3), 1400);
+
     const typingId = addTyping();
 
     try {
@@ -387,6 +579,9 @@
         body: JSON.stringify({ message: text })
       });
       removeTyping(typingId);
+      clearTimeout(flowTimer1); clearTimeout(flowTimer2);
+      setFlowStep(4);
+      setTimeout(resetFlow, 2500);
 
       if (!res.ok) {
         const e = await res.json().catch(() => ({}));
@@ -398,7 +593,9 @@
       addBotBubble(d.answer, d.intent, d.confidence);
 
     } catch (err) {
+      clearTimeout(flowTimer1); clearTimeout(flowTimer2);
       removeTyping(typingId);
+      resetFlow();
       addError('Cannot reach the API. Make sure the server is running.');
     } finally {
       btn.disabled = false;
