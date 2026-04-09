@@ -97,10 +97,15 @@ public class OpenAiCompatibleService : ILlmService
                 return new AgentResult(true, text,
                     new Dictionary<string, object> { ["model"] = model, ["provider"] = _settings.LlmProvider });
             }
+            catch (RateLimitException rle) when (attempt < 4)
+            {
+                _logger.LogWarning("Rate limit hit — waiting {S}s before retry {A}", rle.RetryAfterSeconds, attempt);
+                await Task.Delay(TimeSpan.FromSeconds(rle.RetryAfterSeconds + 1));
+            }
             catch (Exception ex) when (attempt < 3)
             {
                 _logger.LogWarning("{Provider} error (attempt {A}): {E}", _settings.LlmProvider, attempt, ex.Message);
-                await Task.Delay(TimeSpan.FromSeconds(attempt));
+                await Task.Delay(TimeSpan.FromSeconds(attempt * 2));
             }
             catch (Exception ex)
             {
@@ -156,7 +161,16 @@ public class OpenAiCompatibleService : ILlmService
         var content = await resp.Content.ReadAsStringAsync();
 
         if (!resp.IsSuccessStatusCode)
+        {
+            if (resp.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+            {
+                // Parse "Please try again in 13.39s" from Groq's error body
+                var match = System.Text.RegularExpressions.Regex.Match(content, @"try again in (\d+(?:\.\d+)?)s");
+                var seconds = match.Success ? double.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture) : 15;
+                throw new RateLimitException($"{_settings.LlmProvider} rate limit", seconds);
+            }
             throw new HttpRequestException($"{_settings.LlmProvider} API error {resp.StatusCode}: {content}");
+        }
 
         return JsonNode.Parse(content);
     }
@@ -168,4 +182,9 @@ public class OpenAiCompatibleService : ILlmService
             "ollama" => (_settings.OllamaBaseUrl,        _settings.OllamaModel, ""),
             _        => throw new InvalidOperationException($"Unknown provider: {_settings.LlmProvider}")
         };
+}
+
+public class RateLimitException(string message, double retryAfterSeconds) : Exception(message)
+{
+    public double RetryAfterSeconds { get; } = retryAfterSeconds;
 }
