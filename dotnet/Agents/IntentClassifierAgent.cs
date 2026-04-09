@@ -18,8 +18,8 @@ public class IntentClassifierAgent : BaseAgent
     private readonly Queue<(string Query, string Intent)> _history = new();
     private const int HistoryWindow = 20;
 
-    public IntentClassifierAgent(GeminiService gemini, AppSettings settings, ILogger<IntentClassifierAgent> logger)
-        : base(gemini, settings, logger) { }
+    public IntentClassifierAgent(ILlmService llm, AppSettings settings, ILogger<IntentClassifierAgent> logger)
+        : base(llm, settings, logger) { }
 
     // ── BaseAgent interface ───────────────────────────────────────────────────
 

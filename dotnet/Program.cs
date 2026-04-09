@@ -33,7 +33,23 @@ builder.Services.AddSingleton(cfg);
 builder.Services.AddDbContextFactory<AppDbContext>(o =>
     o.UseSqlite("Data Source=support_ai.db"));
 
-builder.Services.AddHttpClient<GeminiService>();
+// ── LLM provider selection ────────────────────────────────────────────────────
+// Switch via appsettings.json "App:LlmProvider" or env var "App__LlmProvider"
+//   "gemini"  → Google Gemini (default)
+//   "groq"    → Groq cloud free tier (llama-3.1-8b-instant)
+//   "ollama"  → Local Ollama (phi3:mini — fully offline)
+var provider = cfg.LlmProvider.ToLower();
+if (provider == "groq" || provider == "ollama")
+{
+    builder.Services.AddHttpClient<OpenAiCompatibleService>();
+    builder.Services.AddSingleton<ILlmService, OpenAiCompatibleService>();
+}
+else
+{
+    builder.Services.AddHttpClient<GeminiService>();
+    builder.Services.AddSingleton<ILlmService, GeminiService>();
+}
+
 builder.Services.AddSingleton<KnowledgeBase>();
 builder.Services.AddSingleton<IntentClassifierAgent>();
 builder.Services.AddSingleton<KnowledgeRetrieverAgent>();

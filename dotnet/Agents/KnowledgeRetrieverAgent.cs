@@ -13,11 +13,11 @@ public class KnowledgeRetrieverAgent : BaseAgent
     public KnowledgeBase KnowledgeBase { get; }
 
     public KnowledgeRetrieverAgent(
-        GeminiService                        gemini,
+        ILlmService                          llm,
         AppSettings                          settings,
         KnowledgeBase                        kb,
         ILogger<KnowledgeRetrieverAgent>     logger)
-        : base(gemini, settings, logger)
+        : base(llm, settings, logger)
     {
         KnowledgeBase = kb;
     }

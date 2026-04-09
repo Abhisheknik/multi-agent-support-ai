@@ -5,17 +5,17 @@ namespace MultiAgentSupportAI.Agents;
 
 /// <summary>
 /// Abstract base for all agents.
-/// Python equivalent: base_agent.py BaseAgent
+/// Uses ILlmService so the provider (Gemini / Groq / Ollama) is swappable via config.
 /// </summary>
 public abstract class BaseAgent
 {
-    protected readonly GeminiService  Gemini;
-    protected readonly AppSettings    Settings;
-    protected readonly ILogger        Logger;
+    protected readonly ILlmService  Llm;
+    protected readonly AppSettings  Settings;
+    protected readonly ILogger      Logger;
 
-    protected BaseAgent(GeminiService gemini, AppSettings settings, ILogger logger)
+    protected BaseAgent(ILlmService llm, AppSettings settings, ILogger logger)
     {
-        Gemini   = gemini;
+        Llm      = llm;
         Settings = settings;
         Logger   = logger;
     }
@@ -30,7 +30,7 @@ public abstract class BaseAgent
     {
         Logger.LogInformation("{Agent} run_start: {Message}", GetType().Name, userMessage[..Math.Min(100, userMessage.Length)]);
 
-        var result = await Gemini.RunAsync(
+        var result = await Llm.RunAsync(
             systemPrompt:    GetSystemPrompt(),
             userMessage:     userMessage,
             toolDefinitions: GetAvailableTools(),

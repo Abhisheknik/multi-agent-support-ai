@@ -10,7 +10,7 @@ namespace MultiAgentSupportAI;
 /// Handles the agentic loop: text → function call → tool result → text.
 /// Python equivalent: base_agent.py _run_gemini()
 /// </summary>
-public class GeminiService
+public class GeminiService : ILlmService
 {
     private readonly HttpClient     _http;
     private readonly AppSettings    _settings;
