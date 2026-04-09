@@ -96,13 +96,18 @@ public class IntentClassifierAgent : BaseAgent
 
     private ClassificationResult ParseResponse(string raw)
     {
-        // Strip markdown fences
         var text = raw.Trim();
+
+        // Strip markdown fences (```json ... ``` or ``` ... ```)
         if (text.StartsWith("```"))
         {
             var lines = text.Split('\n');
-            text = string.Join('\n', lines[1..^1]);
+            text = string.Join('\n', lines[1..^1]).Trim();
         }
+
+        // Extract first JSON object if LLM added surrounding text
+        var jsonMatch = System.Text.RegularExpressions.Regex.Match(text, @"\{[\s\S]*\}");
+        if (jsonMatch.Success) text = jsonMatch.Value;
 
         try
         {
