@@ -84,6 +84,7 @@ public class IntentClassifierAgent : BaseAgent
             return Fallback($"Classification failed: {result.Error}");
         }
 
+        Logger.LogInformation("classify_raw_response: {Raw}", result.Response);
         var parsed = ParseResponse(result.Response);
         _history.Enqueue((query[..Math.Min(100, query.Length)], parsed.Intent));
         if (_history.Count > HistoryWindow) _history.Dequeue();
