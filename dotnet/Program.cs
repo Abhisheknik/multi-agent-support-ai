@@ -200,7 +200,8 @@ app.MapGet("/support/stream", async (
         await Emit(new {
             step       = "response",      status     = "done",
             answer     = retrieval.Response,
-            intent     = cls.Intent,      confidence = cls.Confidence
+            intent     = cls.Intent,      confidence = cls.Confidence,
+            sessionId  = Guid.NewGuid().ToString()
         });
     }
     catch (Exception ex)

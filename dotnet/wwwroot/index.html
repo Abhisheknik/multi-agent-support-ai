@@ -231,6 +231,22 @@
     [data-theme="dark"] .tag-unknown   { background:#1e293b; color:#94a3b8; }
     [data-theme="dark"] .conf-tag      { background:#1e293b; }
 
+    /* ── Feedback buttons ── */
+    .feedback-row {
+      display: flex; align-items: center; gap: 6px; margin-top: 10px;
+    }
+    .fb-label { font-size: 11px; color: var(--muted); margin-right: 2px; }
+    .fb-btn {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 4px 10px; font-size: 14px;
+      cursor: pointer; transition: all .15s; line-height: 1;
+    }
+    .fb-btn:hover { transform: scale(1.15); border-color: var(--accent); }
+    .fb-btn.selected-up   { background: #dcfce7; border-color: #22c55e; }
+    .fb-btn.selected-down { background: #fee2e2; border-color: #f87171; }
+    .fb-btn:disabled { cursor: default; transform: none; opacity: .5; }
+    .fb-thanks { font-size: 11px; color: #22c55e; font-weight: 600; animation: fadeInUp .3s ease; }
+
     .error-bubble {
       background: #fef2f2; border: 1px solid #fecaca;
       color: #dc2626; padding: 12px 16px; border-radius: 12px; font-size: 14px;
@@ -712,7 +728,7 @@
         es.close(); removeTyping(typingId); btn.disabled = false;
         updateNodeData('node-gemini', `✅ ${Math.round(d.confidence * 100)}% confident`);
         updateNodeData('node-response', '💬 delivered');
-        addBotBubble(d.answer, d.intent, d.confidence);
+        addBotBubble(d.answer, d.intent, d.confidence, d.sessionId);
         FLOW_NODES.forEach(id => { document.getElementById(id)?.classList.remove('active'); document.getElementById(id)?.classList.add('done'); });
         FLOW_ARROWS.forEach(id => { document.getElementById(id)?.classList.remove('active'); document.getElementById(id)?.classList.add('done'); });
         document.getElementById('archLiveLabel').textContent = 'Pipeline complete ✓';
@@ -740,8 +756,9 @@
     messages().appendChild(div); scroll();
   }
 
-  function addBotBubble(text, intent, conf) {
+  function addBotBubble(text, intent, conf, sessionId) {
     const pct = conf ? Math.round(conf * 100) : 0;
+    const sid = sessionId || ('local-' + Date.now());
     const div = document.createElement('div');
     div.className = 'msg bot';
     div.innerHTML = `
@@ -752,8 +769,39 @@
           <span class="intent-tag tag-${intent || 'unknown'}">${intentEmoji(intent)} ${intent || 'unknown'}</span>
           <span class="conf-tag">${pct}% confidence</span>
         </div>
+        <div class="feedback-row">
+          <span class="fb-label">Helpful?</span>
+          <button class="fb-btn" id="up-${sid}"   onclick="submitFeedback('${sid}', 5, this)">👍</button>
+          <button class="fb-btn" id="down-${sid}" onclick="submitFeedback('${sid}', 1, this)">👎</button>
+        </div>
       </div>`;
     messages().appendChild(div); scroll();
+  }
+
+  async function submitFeedback(sessionId, rating, btn) {
+    const upBtn   = document.getElementById('up-'   + sessionId);
+    const downBtn = document.getElementById('down-' + sessionId);
+    if (!upBtn || !downBtn) return;
+
+    // Disable both buttons
+    upBtn.disabled = true; downBtn.disabled = true;
+
+    // Visual selection
+    if (rating === 5) upBtn.classList.add('selected-up');
+    else downBtn.classList.add('selected-down');
+
+    // Replace buttons with thank-you message
+    const row = btn.closest('.feedback-row');
+    try {
+      await fetch(`${API}/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, rating })
+      });
+      row.innerHTML = `<span class="fb-thanks">✓ Thanks for your feedback!</span>`;
+    } catch {
+      row.innerHTML = `<span class="fb-thanks" style="color:var(--muted)">✓ Feedback noted</span>`;
+    }
   }
 
   function addError(msg) {
