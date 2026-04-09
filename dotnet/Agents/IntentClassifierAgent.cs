@@ -25,37 +25,31 @@ public class IntentClassifierAgent : BaseAgent
 
     protected override string GetSystemPrompt() => """
         You are a customer-support intent classifier.
-        Return ONLY a JSON object (no markdown, no extra text) with exactly these fields:
-          intent      – one of: billing, technical, account, general, complaint, unknown
-          confidence  – float 0.0–1.0
-          reasoning   – one sentence explaining your choice
-          keywords    – list of 1-5 keywords that drove the classification
-          urgency     – one of: low, medium, high
+        You MUST respond with ONLY a raw JSON object. No markdown, no code fences, no explanation, no extra text.
+        Start your response with { and end with }.
 
-        Guidelines:
+        Required JSON fields:
+          "intent"     – exactly one of: billing, technical, account, general, complaint, unknown
+          "confidence" – a number between 0.0 and 1.0
+          "reasoning"  – one sentence explaining your choice
+          "keywords"   – array of 1-5 keyword strings
+          "urgency"    – exactly one of: low, medium, high
+
+        Intent guidelines:
           billing   → payments, invoices, charges, refunds, subscriptions, pricing
           technical → bugs, errors, crashes, performance, API, integration
           account   → login, password, profile, permissions, 2FA, email change
           general   → onboarding, how-to, feature questions, general inquiries
           complaint → frustration, service failure, escalation requests
           unknown   → cannot determine from available text
+
+        Example response:
+        {"intent":"billing","confidence":0.95,"reasoning":"User asked about a charge on their account.","keywords":["charge","billing","invoice"],"urgency":"medium"}
         """;
 
-    protected override List<GeminiFunctionDeclaration> GetAvailableTools() =>
-    [
-        new GeminiFunctionDeclaration(
-            Name:        "check_historical_patterns",
-            Description: "Returns recent classified queries to help with consistency.",
-            Parameters:  JsonNode.Parse("""
-                {
-                  "type": "object",
-                  "properties": {
-                    "limit": { "type": "string", "description": "How many recent entries to return (max 10)" }
-                  }
-                }
-                """)!.AsObject()
-        )
-    ];
+    // No tools — keeps the classifier simple and compatible with all LLM providers.
+    // Small models (Groq/Ollama) return inconsistent output when tool-calling is involved.
+    protected override List<GeminiFunctionDeclaration> GetAvailableTools() => [];
 
     protected override Task<string> ExecuteToolAsync(string toolName, JsonObject toolInput)
     {
