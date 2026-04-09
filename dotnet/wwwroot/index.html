@@ -353,7 +353,7 @@
     <div class="dot"></div>
     <div>
       <h1>Multi-Agent Support AI</h1>
-      <div class="sub">Powered by Gemini 2.5 Flash</div>
+      <div class="sub" id="headerSub">Powered by AI</div>
     </div>
   </div>
   <nav>
@@ -380,6 +380,7 @@
     <h2>Status</h2>
     <div class="status-box" id="statusBox">
       <div class="row"><span class="label">API</span><span class="badge">online</span></div>
+      <div class="row"><span class="label">Provider</span><span class="value" id="providerName">—</span></div>
       <div class="row"><span class="label">Model</span><span class="value" id="modelName">—</span></div>
       <div class="row"><span class="label">KB Articles</span><span class="value" id="kbCount">—</span></div>
       <div class="row"><span class="label">Uptime</span><span class="value" id="uptime">—</span></div>
@@ -556,6 +557,9 @@
       document.getElementById('modelName').textContent = d.model;
       document.getElementById('kbCount').textContent   = d.knowledgeBaseDocuments;
       document.getElementById('uptime').textContent    = Math.round(d.uptimeSeconds) + 's';
+      const providerLabel = { gemini: 'Gemini', groq: 'Groq', ollama: 'Ollama' }[d.provider] || d.provider;
+      document.getElementById('providerName').textContent = providerLabel;
+      document.getElementById('headerSub').textContent = `Powered by ${providerLabel} · ${d.model}`;
     } catch { document.getElementById('statusBox').style.background = '#fef2f2'; }
   }
   loadHealth();

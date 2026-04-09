@@ -78,12 +78,21 @@ var startTime = DateTime.UtcNow;
 
 // ── GET /health ───────────────────────────────────────────────────────────────
 app.MapGet("/health", (KnowledgeBase kb) =>
-    Results.Ok(new HealthResponse(
+{
+    var (activeModel, activeProvider) = cfg.LlmProvider.ToLower() switch
+    {
+        "groq"   => (cfg.GroqModel,   "groq"),
+        "ollama" => (cfg.OllamaModel, "ollama"),
+        _        => (cfg.GeminiModel, "gemini")
+    };
+    return Results.Ok(new HealthResponse(
         Status:                 "healthy",
-        Model:                  cfg.GeminiModel,
+        Model:                  activeModel,
+        Provider:               activeProvider,
         KnowledgeBaseDocuments: kb.Count(),
         UptimeSeconds:          (DateTime.UtcNow - startTime).TotalSeconds
-    )));
+    ));
+});
 
 // ── POST /classify ────────────────────────────────────────────────────────────
 app.MapPost("/classify", async (CustomerMessage body, IntentClassifierAgent classifier) =>

@@ -50,6 +50,7 @@ public record ArticleUpdateRequest(
 public record HealthResponse(
     string Status,
     string Model,
+    string Provider,
     int    KnowledgeBaseDocuments,
     double UptimeSeconds
 );
