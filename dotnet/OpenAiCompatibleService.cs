@@ -175,6 +175,52 @@ public class OpenAiCompatibleService : ILlmService
         return JsonNode.Parse(content);
     }
 
+    public async IAsyncEnumerable<string> StreamAsync(string systemPrompt, string userMessage)
+    {
+        var (baseUrl, model, apiKey) = GetProviderConfig();
+        var url = $"{baseUrl.TrimEnd('/')}/v1/chat/completions";
+
+        var body = new JsonObject
+        {
+            ["model"]       = model,
+            ["stream"]      = true,
+            ["temperature"] = _settings.Temperature,
+            ["max_tokens"]  = _settings.MaxTokens,
+            ["messages"]    = JsonNode.Parse(JsonSerializer.Serialize(new[]
+            {
+                new { role = "system", content = systemPrompt },
+                new { role = "user",   content = userMessage  }
+            }, _json))
+        };
+
+        using var req = new HttpRequestMessage(HttpMethod.Post, url)
+        {
+            Content = JsonContent.Create(body, options: _json)
+        };
+        if (!string.IsNullOrEmpty(apiKey))
+            req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+
+        using var resp   = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead);
+        using var stream = await resp.Content.ReadAsStreamAsync();
+        using var reader = new System.IO.StreamReader(stream);
+
+        while (!reader.EndOfStream)
+        {
+            var line = await reader.ReadLineAsync();
+            if (string.IsNullOrEmpty(line) || !line.StartsWith("data: ")) continue;
+            var data = line["data: ".Length..];
+            if (data == "[DONE]") break;
+            string? token = null;
+            try
+            {
+                var node = JsonNode.Parse(data);
+                token = node?["choices"]?[0]?["delta"]?["content"]?.GetValue<string>();
+            }
+            catch { /* skip malformed chunks */ }
+            if (!string.IsNullOrEmpty(token)) yield return token;
+        }
+    }
+
     private (string baseUrl, string model, string apiKey) GetProviderConfig() =>
         _settings.LlmProvider.ToLower() switch
         {

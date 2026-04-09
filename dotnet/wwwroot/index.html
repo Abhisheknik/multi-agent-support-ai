@@ -231,6 +231,13 @@
     [data-theme="dark"] .tag-unknown   { background:#1e293b; color:#94a3b8; }
     [data-theme="dark"] .conf-tag      { background:#1e293b; }
 
+    /* ── Streaming cursor ── */
+    .stream-cursor {
+      display: inline-block; color: var(--accent);
+      animation: blink .7s step-end infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
     /* ── Feedback buttons ── */
     .feedback-row {
       display: flex; align-items: center; gap: 6px; margin-top: 10px;
@@ -720,15 +727,22 @@
         if (d.categories?.length) updateNodeSub('node-kb', d.categories.join(', '));
         setFlowStep(4);
 
-      } else if (d.step === 'gemini' && d.status === 'done') {
+      } else if (d.step === 'gemini' && d.status === 'processing') {
         updateNodeData('node-gemini', '✨ generating…');
         setFlowStep(5);
 
+      } else if (d.step === 'answer_start') {
+        removeTyping(typingId);
+        streamingBubble = createStreamingBubble();
+
+      } else if (d.step === 'token') {
+        appendToken(d.token);
+
       } else if (d.step === 'response' && d.status === 'done') {
-        es.close(); removeTyping(typingId); btn.disabled = false;
+        es.close(); btn.disabled = false;
         updateNodeData('node-gemini', `✅ ${Math.round(d.confidence * 100)}% confident`);
         updateNodeData('node-response', '💬 delivered');
-        addBotBubble(d.answer, d.intent, d.confidence, d.sessionId);
+        finalizeStreamingBubble(d.intent, d.confidence, d.sessionId);
         FLOW_NODES.forEach(id => { document.getElementById(id)?.classList.remove('active'); document.getElementById(id)?.classList.add('done'); });
         FLOW_ARROWS.forEach(id => { document.getElementById(id)?.classList.remove('active'); document.getElementById(id)?.classList.add('done'); });
         document.getElementById('archLiveLabel').textContent = 'Pipeline complete ✓';
@@ -744,6 +758,51 @@
       es.close(); removeTyping(typingId); btn.disabled = false;
       addError('Cannot reach the API. Make sure the server is running.'); resetFlow();
     };
+  }
+
+  // ── Streaming bubble ───────────────────────────────────────────────────────
+  let streamingBubble = null;
+
+  function createStreamingBubble() {
+    const div = document.createElement('div');
+    div.className = 'msg bot';
+    div.innerHTML = `
+      <div class="avatar">🤖</div>
+      <div class="bubble">
+        <span class="stream-text"></span><span class="stream-cursor">▋</span>
+      </div>`;
+    messages().appendChild(div);
+    scroll();
+    return div;
+  }
+
+  function appendToken(token) {
+    if (!streamingBubble) return;
+    const textEl = streamingBubble.querySelector('.stream-text');
+    if (textEl) { textEl.textContent += token; scroll(); }
+  }
+
+  function finalizeStreamingBubble(intent, conf, sessionId) {
+    if (!streamingBubble) return;
+    const bubble = streamingBubble.querySelector('.bubble');
+    const text   = streamingBubble.querySelector('.stream-text')?.textContent || '';
+    const cursor = streamingBubble.querySelector('.stream-cursor');
+    if (cursor) cursor.remove();
+    const pct = conf ? Math.round(conf * 100) : 0;
+    const sid = sessionId || ('local-' + Date.now());
+    bubble.innerHTML = `
+      ${escHtml(text)}
+      <div class="intent-row">
+        <span class="intent-tag tag-${intent || 'unknown'}">${intentEmoji(intent)} ${intent || 'unknown'}</span>
+        <span class="conf-tag">${pct}% confidence</span>
+      </div>
+      <div class="feedback-row">
+        <span class="fb-label">Helpful?</span>
+        <button class="fb-btn" id="up-${sid}"   onclick="submitFeedback('${sid}', 5, this)">👍</button>
+        <button class="fb-btn" id="down-${sid}" onclick="submitFeedback('${sid}', 1, this)">👎</button>
+      </div>`;
+    streamingBubble = null;
+    scroll();
   }
 
   // ── Bubble helpers ─────────────────────────────────────────────────────────

@@ -14,4 +14,7 @@ public interface ILlmService
         string                                  userMessage,
         List<GeminiFunctionDeclaration>?        toolDefinitions = null,
         Func<string, JsonObject, Task<string>>? toolExecutor    = null);
+
+    /// <summary>Streams response tokens one chunk at a time.</summary>
+    IAsyncEnumerable<string> StreamAsync(string systemPrompt, string userMessage);
 }

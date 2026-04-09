@@ -177,31 +177,50 @@ app.MapGet("/support/stream", async (
             keywords   = cls.Keywords,           urgency    = cls.Urgency
         });
 
-        // ── Knowledge retrieval ───────────────────────────────────────────
+        // ── Knowledge retrieval (direct KB search, no extra LLM call) ────
         await Emit(new { step = "retrieval", status = "processing" });
-        var articles  = retriever.KnowledgeBase.Search(message, 5);
-        var retrieval = await retriever.RetrieveAndAnswerAsync(message);
+        var articles = retriever.KnowledgeBase.Search(message, 5);
         await Emit(new {
-            step          = "retrieval", status        = "done",
+            step          = "retrieval", status    = "done",
             articlesFound = articles.Count,
             categories    = articles.Select(a => a.Category).Distinct().ToList()
         });
 
-        // ── Gemini (ran inside retriever) ─────────────────────────────────
-        await Emit(new { step = "gemini", status = "done" });
+        // ── Stream final answer ───────────────────────────────────────────
+        await Emit(new { step = "gemini", status = "processing" });
 
-        // ── Final response ────────────────────────────────────────────────
-        if (!retrieval.Success)
+        var kbContext = articles.Count > 0
+            ? string.Join("\n\n", articles.Select(a => $"Title: {a.Title}\n{a.Content}"))
+            : "No relevant articles found.";
+
+        var answerPrompt = $"""
+            You are a helpful customer-support specialist.
+            Answer the customer's question using ONLY the knowledge base articles below.
+            If no article is relevant, politely say so and suggest contacting support.
+            Be concise, friendly, and accurate. Do not invent information.
+
+            Knowledge Base:
+            {kbContext}
+            """;
+
+        var llm = ctx.RequestServices.GetRequiredService<ILlmService>();
+        var sessionId = Guid.NewGuid().ToString();
+        var fullAnswer = new System.Text.StringBuilder();
+
+        await Emit(new { step = "answer_start", sessionId });
+
+        await foreach (var token in llm.StreamAsync(answerPrompt, message))
         {
-            await Emit(new { step = "response", status = "error", error = retrieval.Error });
-            return;
+            fullAnswer.Append(token);
+            await ctx.Response.WriteAsync($"data: {System.Text.Json.JsonSerializer.Serialize(new { step = "token", token }, opts)}\n\n");
+            await ctx.Response.Body.FlushAsync();
         }
 
         await Emit(new {
-            step       = "response",      status     = "done",
-            answer     = retrieval.Response,
-            intent     = cls.Intent,      confidence = cls.Confidence,
-            sessionId  = Guid.NewGuid().ToString()
+            step       = "response", status     = "done",
+            answer     = fullAnswer.ToString(),
+            intent     = cls.Intent, confidence = cls.Confidence,
+            sessionId
         });
     }
     catch (Exception ex)

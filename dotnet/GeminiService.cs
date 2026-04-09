@@ -112,6 +112,18 @@ public class GeminiService : ILlmService
         return new AgentResult(false, "", Error: "Max retries exceeded");
     }
 
+    public async IAsyncEnumerable<string> StreamAsync(string systemPrompt, string userMessage)
+    {
+        // Gemini doesn't use OpenAI streaming format — simulate word-by-word from full response
+        var result = await RunAsync(systemPrompt, userMessage);
+        if (!result.Success) yield break;
+        foreach (var word in result.Response.Split(' '))
+        {
+            yield return word + ' ';
+            await Task.Delay(18);
+        }
+    }
+
     private async Task<GeminiResponse> CallApiAsync(
         string systemPrompt,
         List<GeminiContent> contents,
