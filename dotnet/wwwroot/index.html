@@ -728,25 +728,34 @@
         setFlowStep(4);
 
       } else if (d.step === 'gemini' && d.status === 'processing') {
-        updateNodeData('node-gemini', '✨ generating…');
         setFlowStep(5);
+        updateNodeData('node-gemini', '✨ generating…');
 
       } else if (d.step === 'answer_start') {
         removeTyping(typingId);
         streamingBubble = createStreamingBubble();
+        tokenCount = 0;
 
       } else if (d.step === 'token') {
         appendToken(d.token);
+        tokenCount++;
+        // Update gemini node live every 5 tokens so user sees it working
+        if (tokenCount % 5 === 0) {
+          updateNodeData('node-gemini', `✨ ${tokenCount} tokens…`);
+        }
 
       } else if (d.step === 'response' && d.status === 'done') {
         es.close(); btn.disabled = false;
-        updateNodeData('node-gemini', `✅ ${Math.round(d.confidence * 100)}% confident`);
+        updateNodeData('node-gemini', `✅ ${tokenCount} tokens · ${Math.round(d.confidence * 100)}% conf`);
         updateNodeData('node-response', '💬 delivered');
         finalizeStreamingBubble(d.intent, d.confidence, d.sessionId);
-        FLOW_NODES.forEach(id => { document.getElementById(id)?.classList.remove('active'); document.getElementById(id)?.classList.add('done'); });
-        FLOW_ARROWS.forEach(id => { document.getElementById(id)?.classList.remove('active'); document.getElementById(id)?.classList.add('done'); });
-        document.getElementById('archLiveLabel').textContent = 'Pipeline complete ✓';
-        setTimeout(resetFlow, 3500);
+        // Mark all nodes done after a short delay so user sees the final state
+        setTimeout(() => {
+          FLOW_NODES.forEach(id => { document.getElementById(id)?.classList.remove('active'); document.getElementById(id)?.classList.add('done'); });
+          FLOW_ARROWS.forEach(id => { document.getElementById(id)?.classList.remove('active'); document.getElementById(id)?.classList.add('done'); });
+          document.getElementById('archLiveLabel').textContent = 'Pipeline complete ✓';
+          setTimeout(resetFlow, 3000);
+        }, 600);
 
       } else if ((d.step === 'response' && d.status === 'error') || d.step === 'error') {
         es.close(); removeTyping(typingId); btn.disabled = false;
@@ -762,6 +771,7 @@
 
   // ── Streaming bubble ───────────────────────────────────────────────────────
   let streamingBubble = null;
+  let tokenCount = 0;
 
   function createStreamingBubble() {
     const div = document.createElement('div');
